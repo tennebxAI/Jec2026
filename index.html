@@ -536,7 +536,12 @@
                     const cards = document.querySelectorAll('.pdf-card');
                     
                     cards.forEach(card => {
-                        if (category === 'all' || card.dataset.category === category) {
+                        const pdfCategories = JSON.parse(card.dataset.categories || '[]');
+
+                        // Zeigen wenn: "All" ODER irgendeine Kategorie passt
+                        if (category === 'all' || pdfCategories.some(cat =>
+                            cat.toLowerCase().replace(/\s+/g, '-') === category
+                        )) {
                             card.style.display = 'flex';
                         } else {
                             card.style.display = 'none';
@@ -561,6 +566,13 @@
                 const data = await response.json();
                 const pdfs = data.pdfs || [];
                 
+                // Nach Order sortieren
+                pdfs.sort((a, b) => {
+                    const orderA = a.order || 999;
+                    const orderB = b.order || 999;
+                    return orderA - orderB;
+                });
+
                 if (pdfs.length === 0) {
                     const t = translations[currentLang];
                     grid.innerHTML = `
@@ -576,7 +588,15 @@
                 pdfs.forEach((pdf, index) => {
                     const card = document.createElement('div');
                     card.className = 'pdf-card';
-                    card.dataset.category = pdf.category || 'products'; // Fallback zu 'products'
+
+                    // Kategorien ermitteln (Multi-Support + Legacy-Support)
+                    const pdfCategories = pdf.categories || (pdf.category ? [pdf.category] : ['products']);
+
+                    // data-categories als JSON speichern
+                    card.dataset.categories = JSON.stringify(pdfCategories);
+
+                    // Erste Kategorie für einfache Filter (Legacy)
+                    card.dataset.category = pdfCategories[0].toLowerCase().replace(/\s+/g, '-');
                     
                     // Bestimme das Vorschaubild basierend auf der gewählten Sprache
                     let thumbnail = currentLang === 'de' && pdf.thumbnail_de ? pdf.thumbnail_de : pdf.thumbnail;

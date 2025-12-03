@@ -54,7 +54,21 @@ function handleUpload() {
     
     $title = trim($_POST['title']);
     $description = trim($_POST['description'] ?? 'Keine Beschreibung verfügbar');
-    $category = trim($_POST['category'] ?? 'products');
+
+    // Multi-Kategorie Support
+    $categories = $_POST['categories'] ?? [];
+    if (!is_array($categories)) {
+        $categories = [$categories];
+    }
+    $categories = array_filter($categories);
+    if (empty($categories)) {
+        sendResponse(false, 'Mindestens eine Kategorie muss gewählt werden');
+        return;
+    }
+
+    // Order-Feld
+    $order = isset($_POST['order']) ? (int)$_POST['order'] : 999;
+
     $pdfSource = $_POST['pdf_source'] ?? 'upload';
     $thumbnailFile = $_FILES['thumbnail'];
     
@@ -192,34 +206,34 @@ function handleUpload() {
         }
     }
     
-    // PDF zur JSON-Datenbank hinzufügen
-    $pdfs = loadPDFs();
-    
     $newPdf = [
         'title' => $title,
         'description' => $description,
-        'category' => $category,
+        'categories' => $categories,
+        'order' => $order,
         'size' => $pdfSize,
         'file' => $pdfPath,
-        'file_de' => $pdfPathDe ?? $pdfPath, // Fallback zu EN wenn keine DE Version
+        'file_de' => $pdfPathDe ?? $pdfPath,
         'thumbnail' => $thumbnailPath,
-        'thumbnail_de' => $thumbnailPathDe ?? $thumbnailPath, // Fallback zu EN wenn keine DE Version
+        'thumbnail_de' => $thumbnailPathDe ?? $thumbnailPath,
         'date' => date('d.m.Y')
     ];
     
-    $pdfs[] = $newPdf;
-    
-    if (!savePDFs($pdfs)) {
-        // Hochgeladene Dateien löschen, wenn JSON-Speicherung fehlschlägt
-        if ($pdfSource === 'upload' && file_exists($pdfPath)) {
-            unlink($pdfPath);
-        }
-        unlink($thumbnailPath);
-        sendResponse(false, 'Fehler beim Speichern in der Datenbank');
-        return;
+    // Optional: Link speichern
+    if (isset($_POST['link']) && !empty(trim($_POST['link']))) {
+        $newPdf['link'] = trim($_POST['link']);
     }
     
-    sendResponse(true, 'PDF erfolgreich hinzugefügt', ['pdf' => $newPdf]);
+    // Daten laden und hinzufügen
+    $data = loadPDFData();
+    $data['pdfs'][] = $newPdf;
+    $data['lastUpdated'] = date('c');
+
+    if (savePDFData($data)) {
+        sendResponse(true, 'PDF erfolgreich hinzugefügt', $newPdf);
+    } else {
+        sendResponse(false, 'Fehler beim Speichern der Daten');
+    }
 }
 
 /**
@@ -228,25 +242,15 @@ function handleUpload() {
 function handleEdit() {
     global $uploadsDir, $jsonFile, $allowedImageTypes, $maxFileSize;
     
-    // Validierung
-    if (!isset($_POST['title']) || empty(trim($_POST['title']))) {
-        sendResponse(false, 'Titel ist erforderlich');
+    $editIndex = isset($_POST['edit_index']) ? (int)$_POST['edit_index'] : -1;
+    
+    if ($editIndex < 0) {
+        sendResponse(false, 'Ungültiger Index');
         return;
     }
     
-    if (!isset($_POST['edit_index'])) {
-        sendResponse(false, 'Kein PDF zum Bearbeiten ausgewählt');
-        return;
-    }
-    
-    $title = trim($_POST['title']);
-    $description = trim($_POST['description'] ?? 'Keine Beschreibung verfügbar');
-    $category = trim($_POST['category'] ?? 'products');
-    $editIndex = (int)$_POST['edit_index'];
-    $pdfSource = $_POST['pdf_source'] ?? 'upload';
-    
-    // PDFs laden
-    $pdfs = loadPDFs();
+    $data = loadPDFData();
+    $pdfs = $data['pdfs'];
     
     if (!isset($pdfs[$editIndex])) {
         sendResponse(false, 'PDF nicht gefunden');
@@ -256,11 +260,34 @@ function handleEdit() {
     $existingPdf = $pdfs[$editIndex];
     
     // Titel und Beschreibung aktualisieren
-    $pdfs[$editIndex]['title'] = $title;
-    $pdfs[$editIndex]['description'] = $description;
-    $pdfs[$editIndex]['category'] = $category;
+    if (isset($_POST['title'])) {
+        $pdfs[$editIndex]['title'] = trim($_POST['title']);
+    }
+
+    if (isset($_POST['description'])) {
+        $pdfs[$editIndex]['description'] = trim($_POST['description']);
+    }
     
-    // Vorschaubild aktualisieren (falls hochgeladen)
+    // Kategorien aktualisieren (Multi-Support)
+    if (isset($_POST['categories'])) {
+        $categories = $_POST['categories'];
+        if (!is_array($categories)) {
+            $categories = [$categories];
+        }
+        $categories = array_filter($categories);
+        if (!empty($categories)) {
+            $pdfs[$editIndex]['categories'] = $categories;
+        }
+    }
+
+    // Order aktualisieren
+    if (isset($_POST['order'])) {
+        $pdfs[$editIndex]['order'] = (int)$_POST['order'];
+    }
+
+    $title = $pdfs[$editIndex]['title'];
+
+    // Neues Vorschaubild (optional)
     if (isset($_FILES['thumbnail']) && $_FILES['thumbnail']['error'] === UPLOAD_ERR_OK) {
         $thumbnailFile = $_FILES['thumbnail'];
         
@@ -272,7 +299,7 @@ function handleEdit() {
         
         $thumbnailMimeType = mime_content_type($thumbnailFile['tmp_name']);
         if (!in_array($thumbnailMimeType, $allowedImageTypes)) {
-            sendResponse(false, 'Ungültiges Bildformat (nur JPG, PNG, GIF, WEBP erlaubt)');
+            sendResponse(false, 'Ungültiges Bildformat');
             return;
         }
         
@@ -305,7 +332,6 @@ function handleEdit() {
     if (isset($_FILES['thumbnail_de']) && $_FILES['thumbnail_de']['error'] === UPLOAD_ERR_OK) {
         $thumbnailFileDe = $_FILES['thumbnail_de'];
         
-        // Validieren
         if ($thumbnailFileDe['size'] > $maxFileSize) {
             sendResponse(false, 'Deutsches Vorschaubild ist zu groß (max. 10 MB)');
             return;
@@ -317,14 +343,12 @@ function handleEdit() {
             return;
         }
         
-        // Altes deutsches Vorschaubild löschen (nur wenn lokal und unterschiedlich vom englischen)
         if (isset($existingPdf['thumbnail_de']) && !filter_var($existingPdf['thumbnail_de'], FILTER_VALIDATE_URL)) {
             if (file_exists($existingPdf['thumbnail_de']) && $existingPdf['thumbnail_de'] !== $existingPdf['thumbnail']) {
                 unlink($existingPdf['thumbnail_de']);
             }
         }
         
-        // Neues deutsches Vorschaubild hochladen
         $timestamp = time();
         $safeTitle = preg_replace('/[^a-z0-9-_]/i', '-', $title);
         $safeTitle = preg_replace('/-+/', '-', $safeTitle);
@@ -342,6 +366,8 @@ function handleEdit() {
         $pdfs[$editIndex]['thumbnail_de'] = $thumbnailPathDe;
     }
     
+    $pdfSource = $_POST['pdf_source'] ?? 'upload';
+
     // PDF-Link aktualisieren (falls im Link-Modus)
     if ($pdfSource === 'link' && isset($_POST['pdf_url']) && !empty(trim($_POST['pdf_url']))) {
         $pdfUrl = trim($_POST['pdf_url']);
@@ -351,7 +377,6 @@ function handleEdit() {
             return;
         }
         
-        // Alte PDF-Datei löschen (nur wenn lokal gespeichert)
         if (isset($existingPdf['file']) && !filter_var($existingPdf['file'], FILTER_VALIDATE_URL)) {
             if (file_exists($existingPdf['file'])) {
                 unlink($existingPdf['file']);
@@ -361,11 +386,9 @@ function handleEdit() {
         $pdfs[$editIndex]['file'] = $pdfUrl;
         $pdfs[$editIndex]['size'] = 'Extern';
         
-        // Deutsche PDF-URL aktualisieren (optional)
         if (isset($_POST['pdf_url_de']) && !empty(trim($_POST['pdf_url_de']))) {
             $pdfUrlDe = trim($_POST['pdf_url_de']);
             if (filter_var($pdfUrlDe, FILTER_VALIDATE_URL)) {
-                // Alte deutsche PDF löschen
                 if (isset($existingPdf['file_de']) && !filter_var($existingPdf['file_de'], FILTER_VALIDATE_URL)) {
                     if (file_exists($existingPdf['file_de'])) {
                         unlink($existingPdf['file_de']);
@@ -391,7 +414,6 @@ function handleEdit() {
             $pdfPathDe = $uploadsDir . $pdfFilenameDe;
             
             if (move_uploaded_file($pdfFileDe['tmp_name'], $pdfPathDe)) {
-                // Alte deutsche PDF löschen
                 if (isset($existingPdf['file_de']) && !filter_var($existingPdf['file_de'], FILTER_VALIDATE_URL)) {
                     if (file_exists($existingPdf['file_de']) && $existingPdf['file_de'] !== $existingPdf['file']) {
                         unlink($existingPdf['file_de']);
@@ -402,117 +424,153 @@ function handleEdit() {
         }
     }
     
-    // Speichern
-    if (!savePDFs($pdfs)) {
-        sendResponse(false, 'Fehler beim Speichern der Änderungen');
-        return;
-    }
+    $data['pdfs'] = $pdfs;
+    $data['lastUpdated'] = date('c');
     
-    sendResponse(true, 'PDF erfolgreich aktualisiert', ['pdf' => $pdfs[$editIndex]]);
+    if (savePDFData($data)) {
+        sendResponse(true, 'PDF erfolgreich aktualisiert', $pdfs[$editIndex]);
+    } else {
+        sendResponse(false, 'Fehler beim Speichern');
+    }
 }
 
 /**
  * PDF löschen
  */
 function handleDelete() {
-    global $uploadsDir, $jsonFile;
+    global $jsonFile;
     
-    $input = json_decode(file_get_contents('php://input'), true);
+    $file = $_POST['file'] ?? '';
     
-    if (!isset($input['file'])) {
-        sendResponse(false, 'Dateiname fehlt');
+    if (empty($file)) {
+        sendResponse(false, 'Keine Datei angegeben');
         return;
     }
     
-    $filename = $input['file'];
+    $data = loadPDFData();
+    $pdfs = $data['pdfs'];
+    $found = false;
     
-    // PDFs laden
-    $pdfs = loadPDFs();
-    
-    // PDF finden
-    $index = -1;
-    $pdfToDelete = null;
-    
-    foreach ($pdfs as $i => $pdf) {
-        if ($pdf['file'] === $filename) {
-            $index = $i;
-            $pdfToDelete = $pdf;
+    foreach ($pdfs as $index => $pdf) {
+        if ($pdf['file'] === $file) {
+            // Dateien löschen (nur lokale)
+            if (!filter_var($pdf['file'], FILTER_VALIDATE_URL) && file_exists($pdf['file'])) {
+                unlink($pdf['file']);
+            }
+
+            if (isset($pdf['file_de']) && !filter_var($pdf['file_de'], FILTER_VALIDATE_URL) && file_exists($pdf['file_de']) && $pdf['file_de'] !== $pdf['file']) {
+                unlink($pdf['file_de']);
+            }
+
+            if (!filter_var($pdf['thumbnail'], FILTER_VALIDATE_URL) && file_exists($pdf['thumbnail'])) {
+                unlink($pdf['thumbnail']);
+            }
+
+            if (isset($pdf['thumbnail_de']) && !filter_var($pdf['thumbnail_de'], FILTER_VALIDATE_URL) && file_exists($pdf['thumbnail_de']) && $pdf['thumbnail_de'] !== $pdf['thumbnail']) {
+                unlink($pdf['thumbnail_de']);
+            }
+
+            array_splice($pdfs, $index, 1);
+            $found = true;
             break;
         }
     }
     
-    if ($index === -1) {
+    if (!$found) {
         sendResponse(false, 'PDF nicht gefunden');
         return;
     }
     
-    // Dateien löschen (nur wenn lokal gespeichert)
-    if (isset($pdfToDelete['file']) && !filter_var($pdfToDelete['file'], FILTER_VALIDATE_URL)) {
-        if (file_exists($pdfToDelete['file'])) {
-            unlink($pdfToDelete['file']);
-        }
+    $data['pdfs'] = $pdfs;
+    $data['lastUpdated'] = date('c');
+    
+    if (savePDFData($data)) {
+        sendResponse(true, 'PDF erfolgreich gelöscht');
+    } else {
+        sendResponse(false, 'Fehler beim Speichern');
     }
-    
-    if (isset($pdfToDelete['thumbnail']) && !filter_var($pdfToDelete['thumbnail'], FILTER_VALIDATE_URL)) {
-        if (file_exists($pdfToDelete['thumbnail'])) {
-            unlink($pdfToDelete['thumbnail']);
-        }
-    }
-    
-    // Aus JSON-Datenbank entfernen
-    array_splice($pdfs, $index, 1);
-    
-    if (!savePDFs($pdfs)) {
-        sendResponse(false, 'Fehler beim Aktualisieren der Datenbank');
-        return;
-    }
-    
-    sendResponse(true, 'PDF erfolgreich gelöscht');
 }
 
 /**
  * PDFs auflisten
  */
 function handleList() {
-    $pdfs = loadPDFs();
-    sendResponse(true, 'PDFs geladen', ['pdfs' => $pdfs]);
+    $data = loadPDFData();
+
+    // Nach Order sortieren
+    usort($data['pdfs'], function($a, $b) {
+        $orderA = $a['order'] ?? 999;
+        $orderB = $b['order'] ?? 999;
+        return $orderA - $orderB;
+    });
+
+    sendResponse(true, 'PDFs geladen', $data['pdfs']);
 }
 
 /**
- * PDFs aus JSON laden
+ * Reihenfolge ändern (Drag & Drop)
  */
-function loadPDFs() {
+function handleReorder() {
+    global $jsonFile;
+    
+    $orderData = json_decode($_POST['order'] ?? '[]', true);
+
+    if (empty($orderData)) {
+        sendResponse(false, 'Keine Order-Daten erhalten');
+        return;
+    }
+    
+    $data = loadPDFData();
+    $pdfs = $data['pdfs'];
+    
+    // Order für jedes PDF aktualisieren
+    foreach ($orderData as $item) {
+        $index = $item['index'];
+        $newOrder = $item['order'];
+
+        if (isset($pdfs[$index])) {
+            $pdfs[$index]['order'] = $newOrder;
+        }
+    }
+
+    // Nach Order sortieren
+    usort($pdfs, function($a, $b) {
+        $orderA = $a['order'] ?? 999;
+        $orderB = $b['order'] ?? 999;
+        return $orderA - $orderB;
+    });
+
+    $data['pdfs'] = $pdfs;
+    $data['lastUpdated'] = date('c');
+
+    if (savePDFData($data)) {
+        sendResponse(true, 'Reihenfolge gespeichert');
+    } else {
+        sendResponse(false, 'Fehler beim Speichern');
+    }
+}
+
+/**
+ * Hilfsfunktionen
+ */
+function loadPDFData() {
     global $jsonFile;
     
     if (!file_exists($jsonFile)) {
-        return [];
+        return ['pdfs' => [], 'lastUpdated' => date('c')];
     }
     
-    $content = file_get_contents($jsonFile);
-    $data = json_decode($content, true);
-    
-    return $data['pdfs'] ?? [];
+    $json = file_get_contents($jsonFile);
+    return json_decode($json, true) ?: ['pdfs' => [], 'lastUpdated' => date('c')];
 }
 
-/**
- * PDFs in JSON speichern
- */
-function savePDFs($pdfs) {
+function savePDFData($data) {
     global $jsonFile;
     
-    $data = [
-        'pdfs' => $pdfs,
-        'lastUpdated' => date('c')
-    ];
-    
-    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    
+    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     return file_put_contents($jsonFile, $json) !== false;
 }
 
-/**
- * Dateigröße formatieren
- */
 function formatFileSize($bytes) {
     if ($bytes >= 1073741824) {
         return number_format($bytes / 1073741824, 2) . ' GB';
@@ -521,18 +579,20 @@ function formatFileSize($bytes) {
     } elseif ($bytes >= 1024) {
         return number_format($bytes / 1024, 2) . ' KB';
     } else {
-        return $bytes . ' Bytes';
+        return $bytes . ' bytes';
     }
 }
 
-/**
- * JSON-Antwort senden
- */
-function sendResponse($success, $message, $data = []) {
-    echo json_encode(array_merge([
+function sendResponse($success, $message, $data = null) {
+    $response = [
         'success' => $success,
         'message' => $message
-    ], $data));
-    exit;
+    ];
+
+    if ($data !== null) {
+        $response['data'] = $data;
+    }
+
+    echo json_encode($response);
 }
 ?>
