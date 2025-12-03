@@ -8,6 +8,7 @@ requireLogin();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>Admin - BÜFA PDF Verwaltung</title>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -247,6 +248,31 @@ requireLogin();
             cursor: not-allowed;
         }
 
+        .checkbox-group {
+            border: 2px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 250px;
+            overflow-y: auto;
+            background: #fafafa;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        .checkbox-item:hover {
+            background: #f0f7ff;
+        }
+        .checkbox-item input[type="checkbox"] {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
         .reset-btn {
             padding: 14px 30px;
             background: #e2e8f0;
@@ -309,6 +335,25 @@ requireLogin();
             color: #2d3748;
             margin-bottom: 25px;
             font-size: 1.5rem;
+        }
+
+        .drag-handle {
+            cursor: move;
+            font-size: 1.5rem;
+            color: #999;
+            padding: 0 10px;
+            user-select: none;
+        }
+        .drag-handle:hover {
+            color: #003d7a;
+        }
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #f0f7ff;
+        }
+        .sortable-drag {
+            opacity: 1;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
         .pdf-item {
@@ -536,10 +581,13 @@ requireLogin();
                 </div>
 
                 <div class="form-group">
-                    <label for="pdf-category-input">Kategorie *</label>
-                    <select id="pdf-category-input" name="category" required style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 1rem;">
-                        <!-- Kategorien werden dynamisch geladen -->
-                    </select>
+                    <label>Kategorien * (mehrere wählbar)</label>
+                    <div id="category-checkboxes" class="checkbox-group">
+                        <!-- Dynamisch gefüllt -->
+                    </div>
+                    <small style="color: #718096; margin-top: 5px; display: block;">
+                        Mindestens eine Kategorie auswählen
+                    </small>
                 </div>
 
                 <div class="form-group">
@@ -642,7 +690,7 @@ requireLogin();
 
         function loadCategories() {
             renderCategoriesList();
-            renderCategoryDropdown();
+            loadCategoryCheckboxes();
         }
 
         function renderCategoriesList() {
@@ -662,17 +710,41 @@ requireLogin();
             });
         }
 
-        function renderCategoryDropdown() {
-            const select = document.getElementById('pdf-category-input');
-            select.innerHTML = '';
+        // Checkboxen generieren
+        function loadCategoryCheckboxes() {
+            const container = document.getElementById('category-checkboxes');
+            if (!container) return;
             
-            categories.forEach(cat => {
-                if (cat === 'All') return; // "All" nicht im Dropdown
-                const option = document.createElement('option');
-                option.value = cat.toLowerCase().replace(/\s+/g, '-');
-                option.textContent = cat;
-                select.appendChild(option);
+            container.innerHTML = '';
+
+            const selectableCategories = categories.filter(cat => cat !== 'All');
+
+            selectableCategories.forEach(cat => {
+                const div = document.createElement('div');
+                div.className = 'checkbox-item';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `cat-${cat}`;
+                checkbox.value = cat;
+                checkbox.name = 'categories[]';
+                checkbox.className = 'category-checkbox';
+
+                const label = document.createElement('label');
+                label.htmlFor = `cat-${cat}`;
+                label.textContent = cat;
+                label.style.cursor = 'pointer';
+
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                container.appendChild(div);
             });
+        }
+
+        // Ausgewählte Kategorien sammeln
+        function getSelectedCategories() {
+            const checkboxes = document.querySelectorAll('.category-checkbox:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
         }
 
         function addCategory() {
@@ -758,6 +830,7 @@ requireLogin();
             pdfs.forEach((pdf, index) => {
                 const item = document.createElement('div');
                 item.className = 'pdf-item';
+                item.dataset.index = index;
                 
                 const thumbnailHtml = pdf.thumbnail 
                     ? `<img src="${pdf.thumbnail}" alt="${pdf.title}" onerror="this.parentElement.innerHTML='📄'">`
@@ -773,7 +846,13 @@ requireLogin();
                     ? '<span style="background: #48bb78; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-left: 5px;">EN + DE</span>'
                     : '<span style="background: #90cdf4; color: #1a365d; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-left: 5px;">nur EN</span>';
 
+                const pdfCategories = pdf.categories || [pdf.category] || ['products'];
+                const categoryBadges = pdfCategories.map(cat =>
+                    `<span style="background: #e6f2ff; color: #003d7a; padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; margin-right: 5px;">${cat}</span>`
+                ).join('');
+
                 item.innerHTML = `
+                    <div class="drag-handle" title="Ziehen zum Sortieren">⋮⋮</div>
                     <div class="pdf-item-thumbnail">
                         ${thumbnailHtml}
                     </div>
@@ -782,6 +861,7 @@ requireLogin();
                         <div class="pdf-item-meta">
                             📅 ${pdf.date} • 📦 ${pdf.size}
                         </div>
+                        <div style="margin-top: 5px;">${categoryBadges}</div>
                         ${linkInfo}
                     </div>
                     <button class="edit-btn" onclick="editPDF(${index})">
@@ -794,6 +874,7 @@ requireLogin();
                 
                 listContent.appendChild(item);
             });
+            initSortable();
         }
 
         // PDF hochladen
@@ -809,6 +890,17 @@ requireLogin();
             
             const formData = new FormData(e.target);
             formData.append('pdf_source', pdfSource);
+
+            const selectedCategories = getSelectedCategories();
+            if (selectedCategories.length === 0) {
+                showMessage('Bitte mindestens eine Kategorie auswählen', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✓ PDF hinzufügen';
+                return;
+            }
+            selectedCategories.forEach(cat => {
+                formData.append('categories[]', cat);
+            });
             
             // Wenn im Bearbeitungsmodus, Index mitschicken
             if (editingIndex !== null) {
@@ -855,7 +947,12 @@ requireLogin();
             // Formular mit vorhandenen Daten füllen
             document.getElementById('pdf-title-input').value = pdf.title;
             document.getElementById('pdf-description-input').value = pdf.description;
-            document.getElementById('pdf-category-input').value = pdf.category || 'products';
+
+            // Kategorien in Checkboxen setzen
+            const pdfCategories = pdf.categories || [pdf.category] || [];
+            document.querySelectorAll('.category-checkbox').forEach(cb => {
+                cb.checked = pdfCategories.includes(cb.value);
+            });
             
             // Vorschaubild nicht mehr erforderlich im Edit-Modus
             document.getElementById('thumbnail-input').required = false;
@@ -1019,6 +1116,55 @@ requireLogin();
         // PDFs beim Laden der Seite anzeigen
         loadPDFs();
         loadCategories();
+
+        let sortableInstance = null;
+
+        function initSortable() {
+            const list = document.getElementById('pdf-list-content');
+            if (!list || sortableInstance) return;
+
+            sortableInstance = Sortable.create(list, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                onEnd: function(evt) {
+                    updatePDFOrder();
+                }
+            });
+        }
+
+        async function updatePDFOrder() {
+            const items = document.querySelectorAll('.pdf-item');
+            const order = [];
+
+            items.forEach((item, index) => {
+                order.push({
+                    index: parseInt(item.dataset.index),
+                    order: index + 1
+                });
+            });
+
+            try {
+                const response = await fetch('api.php?action=reorder', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({
+                        order: JSON.stringify(order)
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('Reihenfolge gespeichert', 'success');
+                } else {
+                    showMessage('Fehler: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Fehler beim Speichern der Reihenfolge', 'error');
+            }
+        }
     </script>
 </body>
 </html>
