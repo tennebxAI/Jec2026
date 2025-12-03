@@ -1,0 +1,32 @@
+# BÜFA JEC2026 Landing Page - Git Ignore
+
+# Uploads und Daten
+pdfs/
+pdfs.json
+
+# Backups
+*.backup
+*.old
+*-old.php
+*-backup.php
+
+# Sensitive Daten
+config-local.php
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# MacOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+error_log
