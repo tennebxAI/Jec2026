@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="description" content="BÜFA Composite Systems - JEC World 2026. Entdecken Sie unsere innovativen Composite-Lösungen.">
+    <title>BÜFA Composite Systems - JEC World 2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .top-header {
+            background: #003d7a;
+            color: white;
+            padding: 20px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: padding 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .top-header.scrolled {
+            padding: 15px 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .logo-link {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            background: white;
+            padding: 8px 20px;
+        }
+
+        .logo-image {
+            height: 50px;
+            width: auto;
+            display: block;
+        }
+
+        .top-header a {
+            color: white;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .top-header a:hover {
+            text-decoration: underline;
+        }
+
+        .language-toggle {
+            display: flex;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px;
+            border-radius: 0;
+        }
+
+        .lang-btn {
+            padding: 6px 12px;
+            background: transparent;
+            color: white;
+            border: none;
+            border-radius: 0;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .lang-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .lang-btn.active {
+            background: white;
+            color: #003d7a;
+        }
+
+        .contact-btn {
+            color: white;
+            text-decoration: none;
+            font-size: 1rem;
+            padding: 12px 24px;
+            background: #0051a5;
+            border: 1px solid #0051a5;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .contact-btn:hover {
+            background: #003d7a;
+            border-color: #003d7a;
+            color: white;
+            text-decoration: none;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            background: white;
+            padding: 60px 20px;
+            border-radius: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            color: #003d7a;
+            font-weight: 700;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            color: #666;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .filter-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 12px 24px;
+            background: white;
+            color: #003d7a;
+            border: 2px solid #e2e8f0;
+            border-radius: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn:hover {
+            border-color: #003d7a;
+            background: #f0f7ff;
+        }
+
+        .filter-btn.active {
+            background: #003d7a;
+            color: white;
+            border-color: #003d7a;
+        }
+
+        .pdf-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .pdf-card {
+            background: white;
+            border-radius: 0;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .pdf-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0,61,122,0.15);
+        }
+
+        .pdf-card-link {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .pdf-thumbnail {
+            width: 100%;
+            height: 0;
+            padding-bottom: 120%; /* Etwas kleiner als vorher (141.4%) */
+            position: relative;
+            background: #f0f0f0;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+
+        .pdf-thumbnail img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Zeigt das ganze Bild ohne Beschnitt */
+            background: white;
+        }
+
+        .pdf-thumbnail.placeholder {
+            background: #003d7a;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pdf-thumbnail.placeholder::after {
+            content: '📄';
+            position: absolute;
+            font-size: 4rem;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .pdf-info {
+            padding: 20px;
+        }
+
+        .pdf-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #003d7a;
+            margin-bottom: 8px;
+            line-height: 1.3;
+            min-height: 4.2em; /* 3 Zeilen à 1.3 line-height */
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .pdf-description {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .pdf-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #999;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+        }
+
+        .download-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: #003d7a;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 0;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: #002d5c;
+        }
+
+        .download-icon {
+            margin-right: 8px;
+        }
+
+        .language-badge {
+            display: inline-block;
+            background: white;
+            color: #003d7a;
+            padding: 4px 10px;
+            border-radius: 0;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .no-pdfs {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .no-pdfs h2 {
+            color: #003d7a;
+            margin-bottom: 10px;
+        }
+
+        .no-pdfs p {
+            color: #666;
+        }
+
+        footer {
+            text-align: center;
+            color: #666;
+            margin-top: 60px;
+            padding: 20px;
+            background: white;
+            border-radius: 0;
+        }
+
+        @media (max-width: 768px) {
+            .top-header {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+
+            .top-header > div:last-child {
+                flex-direction: column;
+                gap: 10px;
+                width: 100%;
+            }
+
+            .contact-btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            header p {
+                font-size: 1rem;
+            }
+
+            .pdf-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px 15px;
+            }
+
+            header {
+                padding: 30px 15px;
+            }
+
+            header h1 {
+                font-size: 1.5rem;
+            }
+
+            header p {
+                font-size: 0.95rem;
+            }
+
+            .pdf-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .pdf-title {
+                font-size: 1.1rem;
+            }
+
+            .pdf-description {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-header">
+        <a href="https://www.buefa-composites.com/" target="_blank" class="logo-link">
+            <img src="https://www.buefa-composites.com/fileadmin/images/BUEFA_Composites-Logo_blau-Freisteller.png" alt="BÜFA Composites" class="logo-image">
+        </a>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div class="language-toggle">
+                <button class="lang-btn active" data-lang="en">EN</button>
+                <button class="lang-btn" data-lang="de">DE</button>
+            </div>
+            <a href="https://www.buefa-composites.com/contact" id="contact-link" class="contact-btn" target="_blank">✉️ Contact</a>
+            <a href="https://www.buefa-composites.com/" target="_blank" id="main-website-link">To Main Website ↗</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Welcome to JEC World 2026</h1>
+            <p>Discover our innovative composite solutions for a sustainable future. All information paperless – download our brochures and data sheets directly to your device.</p>
+        </header>
+
+        <!-- Filter Buttons -->
+        <div class="filter-buttons" id="filter-buttons">
+            <!-- Filter werden dynamisch geladen -->
+        </div>
+
+        <!-- PDF-Grid -->
+        <div class="pdf-grid" id="pdf-grid">
+            <!-- PDFs werden hier dynamisch geladen -->
+        </div>
+
+        <footer>
+            <p>&copy; 2026 BÜFA Composite Systems GmbH & Co. KG. Alle Rechte vorbehalten.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Übersetzungen
+        const translations = {
+            en: {
+                mainWebsite: "To Main Website",
+                title: "Welcome to JEC World 2026",
+                subtitle: "Discover our innovative composite solutions for a sustainable future. All information paperless – download our brochures and data sheets directly to your device.",
+                filterAll: "All",
+                downloadBtn: "Download",
+                visitWebsite: "Visit Website",
+                noDocuments: "No documents available yet",
+                noDocumentsText: "No PDF documents have been uploaded yet.",
+                loadingError: "Loading Error",
+                loadingErrorText: "The PDF data could not be loaded. Please create the file \"pdfs.json\" in the same folder.",
+                copyright: "All rights reserved.",
+                onlyInEnglish: "🇬🇧 EN only",
+                onlyInGerman: "🇩🇪 DE only",
+                contact: "Contact",
+                contactLink: "https://www.buefa-composites.com/contact"
+            },
+            de: {
+                mainWebsite: "Zur Hauptwebsite",
+                title: "Willkommen auf der JEC World 2026",
+                subtitle: "Entdecken Sie unsere innovativen Composite-Lösungen für eine nachhaltige Zukunft. Alle Informationen papierlos – laden Sie unsere Broschüren und Datenblätter direkt auf Ihr Gerät.",
+                filterAll: "Alle",
+                downloadBtn: "Herunterladen",
+                visitWebsite: "Zur Webseite",
+                noDocuments: "Noch keine Dokumente verfügbar",
+                noDocumentsText: "Es wurden noch keine PDF-Dokumente hochgeladen.",
+                loadingError: "Fehler beim Laden",
+                loadingErrorText: "Die PDF-Daten konnten nicht geladen werden. Bitte erstellen Sie die Datei \"pdfs.json\" im gleichen Ordner.",
+                copyright: "Alle Rechte vorbehalten.",
+                onlyInEnglish: "🇬🇧 Nur EN",
+                onlyInGerman: "🇩🇪 Nur DE",
+                contact: "Kontakt",
+                contactLink: "https://www.buefa-composites.com/de/kontakt"
+            }
+        };
+
+        let currentLang = localStorage.getItem('language') || 'en';
+
+        // Sprache wechseln
+        function switchLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            
+            // Buttons aktualisieren
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === lang);
+            });
+            
+            // Texte aktualisieren
+            updateTexts();
+            
+            // PDFs neu laden (für Button-Texte)
+            loadPDFs();
+        }
+
+        function updateTexts() {
+            const t = translations[currentLang];
+            
+            // Header
+            document.getElementById('main-website-link').textContent = t.mainWebsite + ' ↗';
+            document.getElementById('contact-link').textContent = '✉️ ' + t.contact;
+            document.getElementById('contact-link').href = t.contactLink;
+            document.querySelector('header h1').textContent = t.title;
+            document.querySelector('header p').textContent = t.subtitle;
+            
+            // Footer
+            document.querySelector('footer p').innerHTML = `&copy; 2026 BÜFA Composite Systems GmbH & Co. KG. ${t.copyright}`;
+        }
+
+        // Sprach-Buttons Event Listener
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                switchLanguage(this.dataset.lang);
+            });
+        });
+
+        // Kategorien aus localStorage laden (synchronisiert mit Admin)
+        let categories = JSON.parse(localStorage.getItem('categories') || '["All", "Sustainability", "Products", "Systems"]');
+
+        // Filter-Buttons dynamisch erstellen
+        function loadFilterButtons() {
+            const filterContainer = document.getElementById('filter-buttons');
+            filterContainer.innerHTML = '';
+            
+            categories.forEach((cat, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'filter-btn' + (index === 0 ? ' active' : '');
+                btn.dataset.category = cat.toLowerCase().replace(/\s+/g, '-');
+                
+                // "All" übersetzen
+                if (cat === 'All') {
+                    btn.textContent = translations[currentLang].filterAll;
+                } else {
+                    btn.textContent = cat;
+                }
+                
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const category = this.dataset.category;
+                    const cards = document.querySelectorAll('.pdf-card');
+                    
+                    cards.forEach(card => {
+                        if (category === 'all' || card.dataset.category === category) {
+                            card.style.display = 'flex';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+                
+                filterContainer.appendChild(btn);
+            });
+        }
+
+        // PDFs aus pdfs.json laden
+        async function loadPDFs() {
+            const grid = document.getElementById('pdf-grid');
+            
+            try {
+                const response = await fetch('pdfs.json');
+                if (!response.ok) {
+                    throw new Error('pdfs.json nicht gefunden');
+                }
+                
+                const data = await response.json();
+                const pdfs = data.pdfs || [];
+                
+                if (pdfs.length === 0) {
+                    const t = translations[currentLang];
+                    grid.innerHTML = `
+                        <div class="no-pdfs" style="grid-column: 1 / -1;">
+                            <h2>${t.noDocuments}</h2>
+                            <p>${t.noDocumentsText}</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                grid.innerHTML = '';
+                pdfs.forEach((pdf, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'pdf-card';
+                    card.dataset.category = pdf.category || 'products'; // Fallback zu 'products'
+                    
+                    // Bestimme das Vorschaubild basierend auf der gewählten Sprache
+                    let thumbnail = currentLang === 'de' && pdf.thumbnail_de ? pdf.thumbnail_de : pdf.thumbnail;
+                    
+                    const thumbnailHtml = thumbnail 
+                        ? `<div class="pdf-thumbnail"><img src="${thumbnail}" alt="${pdf.title}"></div>`
+                        : '<div class="pdf-thumbnail placeholder">📄</div>';
+
+                    // Bestimme den Link basierend auf der gewählten Sprache
+                    let pdfFile = currentLang === 'de' && pdf.file_de ? pdf.file_de : pdf.file;
+                    
+                    // Bestimme den Link - entweder externer Link oder PDF-Download
+                    const downloadUrl = pdf.link && pdf.link.trim() !== '' ? pdf.link : pdfFile;
+                    const isExternalLink = pdf.link && pdf.link.trim() !== '';
+                    const target = isExternalLink ? 'target="_blank" rel="noopener noreferrer"' : '';
+                    const downloadAttr = isExternalLink ? '' : `download="${pdf.title}.pdf"`;
+                    const buttonIcon = isExternalLink ? '🔗' : '⬇️';
+                    const buttonText = isExternalLink ? translations[currentLang].visitWebsite : translations[currentLang].downloadBtn;
+
+                    // Sprach-Badge: Zeige nur wenn nicht in aktueller Sprache verfügbar
+                    let languageBadge = '';
+                    if (currentLang === 'de') {
+                        // Deutsch gewählt, aber nur EN verfügbar
+                        if (!pdf.file_de || pdf.file_de === pdf.file) {
+                            languageBadge = `<div class="language-badge">🌐 ${translations[currentLang].onlyInEnglish}</div>`;
+                        }
+                    } else if (currentLang === 'en') {
+                        // Englisch gewählt, aber nur DE verfügbar (seltener Fall)
+                        if (pdf.file_de && pdf.file_de !== pdf.file && !pdf.file) {
+                            languageBadge = `<div class="language-badge">🌐 ${translations[currentLang].onlyInGerman}</div>`;
+                        }
+                    }
+
+                    card.innerHTML = `
+                        <a href="${downloadUrl}" class="pdf-card-link" ${target} ${downloadAttr}>
+                            ${thumbnailHtml}
+                            <div class="pdf-info">
+                                <h3 class="pdf-title">${pdf.title}</h3>
+                                <p class="pdf-description">${pdf.description}</p>
+                                ${languageBadge}
+                            </div>
+                        </a>
+                    `;
+                    
+                    grid.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error loading PDFs:', error);
+                const t = translations[currentLang];
+                grid.innerHTML = `
+                    <div class="no-pdfs" style="grid-column: 1 / -1;">
+                        <h2>${t.loadingError}</h2>
+                        <p>${t.loadingErrorText}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // PDFs beim Laden der Seite anzeigen
+        switchLanguage(currentLang); // Sprache initialisieren
+        loadFilterButtons();
+        loadPDFs();
+
+        // Sticky Header Scroll-Effekt
+        let lastScroll = 0;
+        window.addEventListener('scroll', function() {
+            const header = document.querySelector('.top-header');
+            const currentScroll = window.pageYOffset;
+            
+            if (currentScroll > 20) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+            
+            lastScroll = currentScroll;
+        });
+    </script>
+</body>
+</html>
